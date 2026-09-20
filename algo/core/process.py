@@ -1,8 +1,11 @@
 """算法无关的持久原生多进程客户端池。"""
 
 import argparse
+import os
 import traceback
 from collections.abc import Mapping
+from datetime import datetime
+from time import perf_counter
 from typing import Any, cast
 
 import torch
@@ -17,6 +20,27 @@ from .protocol import (
 )
 
 
+def startup_trace(
+    args: argparse.Namespace, stage: str, worker_id: int | None = None
+) -> None:
+    """仅在 DEBUG 模式输出可跨进程比较的启动时间戳。"""
+    if getattr(args, "log_level", "INFO") != "DEBUG":
+        return
+    log_file = getattr(args, "_startup_log_file", None)
+    log_lock = getattr(args, "_startup_log_lock", None)
+    if log_file is None or log_lock is None:
+        return
+    worker = "main" if worker_id is None else f"worker={worker_id}"
+    timestamp = datetime.now().astimezone().isoformat(timespec="milliseconds")
+    message = (
+        f"{timestamp} | DEBUG | [startup t={perf_counter():.6f} "
+        f"pid={os.getpid()} {worker}] {stage}\n"
+    )
+    with log_lock, open(log_file, "a", encoding="utf-8") as file:
+        file.write(message)
+        file.flush()
+
+
 def _worker(
     worker_id: int,
     device_name: str,
@@ -29,11 +53,17 @@ def _worker(
     outbox: Any,
 ) -> None:
     """创建钩子实例并串行执行调度给本 Worker 的任务。"""
+    startup_trace(args, "worker_entry", worker_id)
     try:
         device = torch.device(device_name)
+        startup_trace(args, f"cuda_set_device_begin device={device_name}", worker_id)
         torch.cuda.set_device(device)
+        startup_trace(args, "cuda_set_device_done", worker_id)
+        startup_trace(args, "client_init_begin", worker_id)
         hook = hook_type(args, device, num_classes)
+        startup_trace(args, "client_init_done", worker_id)
         hook.set_data(train_sets, test_sets)
+        startup_trace(args, "set_data_done", worker_id)
     except Exception:  # noqa: BLE001 -- 必须将 Worker 初始化异常传给主进程。
         outbox.put((worker_id, None, None, traceback.format_exc()))
         return
@@ -62,13 +92,15 @@ def _validate_training_result(task: ClientTask, result: ClientResult) -> None:
             raise ValueError("ClientHook 必须返回独立的 CPU 模型状态")
 
 
-def _validate_evaluation_result(
-    task: EvaluationTask, result: EvaluationResult
-) -> None:
+def _validate_evaluation_result(task: EvaluationTask, result: EvaluationResult) -> None:
     """验证评估结果的客户端身份和计数范围。"""
     if result.client_id != task.client_id:
         raise ValueError("ClientHook 返回的 client_id 与评估任务不一致")
-    if result.correct < 0 or result.num_samples < 0 or result.correct > result.num_samples:
+    if (
+        result.correct < 0
+        or result.num_samples < 0
+        or result.correct > result.num_samples
+    ):
         raise ValueError("评估结果的正确数或样本数无效")
 
 
@@ -104,16 +136,21 @@ class PersistentClientPool:
             )
             for worker_id, device in enumerate(devices)
         ]
-        for process in self.processes:
+        for worker_id, process in enumerate(self.processes):
+            started = perf_counter()
+            startup_trace(args, f"process_start_begin worker={worker_id}")
             process.start()
+            startup_trace(
+                args,
+                f"process_start_done worker={worker_id} pid={process.pid} "
+                f"elapsed={perf_counter() - started:.3f}s",
+            )
 
     def run(self, tasks: list[ClientTask]) -> dict[int, ClientResult]:
         """调度任务；任一 Worker 错误都会使本轮立即失败。"""
         return cast(dict[int, ClientResult], self._run(tasks, "训练"))
 
-    def evaluate(
-        self, tasks: list[EvaluationTask]
-    ) -> dict[int, EvaluationResult]:
+    def evaluate(self, tasks: list[EvaluationTask]) -> dict[int, EvaluationResult]:
         """复用同一批 Worker 并发执行客户端私有测试集评估。"""
         return cast(dict[int, EvaluationResult], self._run(tasks, "评估"))
 

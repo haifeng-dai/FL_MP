@@ -13,7 +13,7 @@ def add_shared_arguments(parser: argparse.ArgumentParser) -> None:
         "--dataset", choices=("cifar10", "cifar100", "mnist"), default="cifar10"
     )
     parser.add_argument("--model", choices=("cnn",), default="cnn")
-    parser.add_argument("--num-rounds", type=int, default=100)
+    parser.add_argument("--num-rounds", type=int, default=1000)
     parser.add_argument("--num-epochs", type=int, default=10)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--momentum", type=float, default=0.0)
@@ -26,6 +26,11 @@ def add_shared_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--service-device", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42)
+    trials = parser.add_mutually_exclusive_group()
+    trials.add_argument(
+        "--times", type=int, default=1, help="从第 1 次到第 N 次依次运行"
+    )
+    trials.add_argument("--trials", help="逗号分隔的试次编号，例如 1,3,5")
     parser.add_argument("--test-ratio", type=float, default=0.2)
     parser.add_argument(
         "--partition", choices=("iid", "dirichlet", "pathological"), default="dirichlet"
@@ -43,14 +48,6 @@ def add_shared_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--data-root", default="datasets")
     parser.add_argument("--result-root", default="results")
     parser.add_argument(
-        "--adj-type",
-        choices=("ring", "complete", "random", "small_world", "scale_free", "star"),
-        default="ring",
-    )
-    parser.add_argument("--edge-p", type=float, default=0.2)
-    parser.add_argument("--k-small-world", type=int, default=4)
-    parser.add_argument("--m-scale-free", type=int, default=2)
-    parser.add_argument(
         "--log-level", choices=("DEBUG", "INFO", "WARNING", "ERROR"), default="INFO"
     )
 
@@ -67,8 +64,8 @@ def validate_arguments(args: argparse.Namespace) -> None:
         raise ValueError("check-round 必须为正数")
     if args.classes_per_client is not None and args.classes_per_client < 1:
         raise ValueError("classes-per-client 必须为正数")
-    if not 0 < args.edge_p <= 1:
-        raise ValueError("edge-p 必须在 (0, 1] 内")
+    if args.times < 1:
+        raise ValueError("times 必须为正数")
     parse_devices(args.devices)
     if not torch.cuda.is_available():
         raise RuntimeError("FL_MP 仅支持 NVIDIA CUDA GPU")
@@ -99,9 +96,21 @@ def parse_devices(spec: str) -> list[str]:
     return devices
 
 
+def parse_trials(args: argparse.Namespace) -> list[int]:
+    """将框架级试次配置解析为有序且不重复的正整数编号。"""
+    if args.trials is None:
+        return list(range(1, args.times + 1))
+    try:
+        trials = [int(item.strip()) for item in args.trials.split(",")]
+    except ValueError as exc:
+        raise ValueError("trials 必须是逗号分隔的正整数") from exc
+    if not trials or any(trial < 1 for trial in trials):
+        raise ValueError("trials 必须是逗号分隔的正整数")
+    return list(dict.fromkeys(trials))
+
+
 def set_seed(seed: int) -> None:
     """设置主进程可控随机源。Worker 使用任务下发的确定性 seed。"""
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-

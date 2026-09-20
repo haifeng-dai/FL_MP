@@ -1,8 +1,28 @@
 """去中心化算法的拓扑和客户端状态混合工具。"""
 
+import argparse
+
 import torch
 
 from .state import clone_state
+
+
+def add_topology_arguments(parser: argparse.ArgumentParser) -> None:
+    """添加去中心化算法共享的通信拓扑参数。"""
+    parser.add_argument(
+        "--adj-type",
+        choices=("ring", "complete", "random", "small_world", "scale_free", "star"),
+        default="ring",
+    )
+    parser.add_argument("--edge-p", type=float, default=0.2)
+    parser.add_argument("--k-small-world", type=int, default=4)
+    parser.add_argument("--m-scale-free", type=int, default=2)
+
+
+def validate_topology_arguments(args: argparse.Namespace) -> None:
+    """验证去中心化通信拓扑参数。"""
+    if not 0 < args.edge_p <= 1:
+        raise ValueError("edge-p 必须在 (0, 1] 内")
 
 
 def adjacency(args) -> torch.Tensor:

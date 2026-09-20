@@ -4,14 +4,15 @@ version = "0.1.0"
 description = "基于 PyTorch 原生多进程的联邦学习框架"
 requires-python = ">=3.12"
 dependencies = [
-    "torch>=2.11.0",
-    "torchvision>=0.26.0",
+    "matplotlib",
+    "torch",
+    "torchvision",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.0",
-    "ruff>=0.15.0",
+    "pytest",
+    "ruff",
 ]
 
 [tool.ruff]

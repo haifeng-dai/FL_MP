@@ -10,12 +10,12 @@ from typing import Any
 import torch
 from torch.utils.data import ConcatDataset, Subset
 
-from dataset import load_federated_data, make_loader
-from model import build_model
-from result import append_metrics
+from data import load_federated_data, make_loader
+from model import Model, build_model
+from save import append_metrics
 
 from .config import parse_devices, set_seed
-from .process import PersistentClientPool
+from .process import PersistentClientPool, startup_trace
 from .protocol import (
     ClientHook,
     ClientResult,
@@ -24,6 +24,49 @@ from .protocol import (
     EvaluationTask,
 )
 from .state import clone_state
+
+
+class ProgressBar:
+    """无额外依赖的服务端终端进度条。"""
+
+    def __init__(self, algorithm: str, total: int):
+        self.algorithm = algorithm.upper()
+        self.total = total
+        self.current = 0
+
+    def update(
+        self,
+        loss: float,
+        accuracy: float,
+        max_accuracy: float,
+        round_elapsed: float,
+        total_elapsed: float,
+        extra_fields: dict[str, str | int | float] | None = None,
+    ) -> None:
+        """刷新当前通信轮进度与基础指标。"""
+        self.current += 1
+        average_elapsed = total_elapsed / self.current
+        remaining = average_elapsed * (self.total - self.current)
+        extras = (
+            ""
+            if not extra_fields
+            else " "
+            + " ".join(f"{name}={value}" for name, value in extra_fields.items())
+        )
+        text = (
+            f"\r{self.algorithm} {self.current}/{self.total} "
+            f"loss={loss:.4f} acc={accuracy:.2f}% max_acc={max_accuracy:.2f}% "
+            f"elapsed={format_duration(total_elapsed)} eta={format_duration(remaining)} "
+            f"round_time={round_elapsed:.2f}s{extras}"
+        )
+        sys.stderr.write(text)
+        sys.stderr.flush()
+
+    def close(self) -> None:
+        """结束进度行。"""
+        if self.current:
+            sys.stderr.write("\n")
+            sys.stderr.flush()
 
 
 class BaseClient(ClientHook):
@@ -98,7 +141,7 @@ class BaseClient(ClientHook):
             samples += len(targets)
         return EvaluationResult(task.client_id, correct, samples)
 
-    def copy_model(self, state: dict[str, torch.Tensor]) -> torch.nn.Module:
+    def copy_model(self, state: dict[str, torch.Tensor]) -> Model:
         """重建并冻结一个加载指定状态的参考模型。"""
         model = build_model(
             self.model_name,
@@ -111,7 +154,7 @@ class BaseClient(ClientHook):
         model.eval().requires_grad_(False)
         return model
 
-    def build_optimizer(self, model: torch.nn.Module = None) -> torch.optim.Optimizer:
+    def build_optimizer(self, model: Model | None = None) -> torch.optim.Optimizer:
         """构建默认 SGD；使用其他优化器的算法可覆写本方法。"""
         model_opt = self.model if model is None else model
         return torch.optim.SGD(
@@ -150,49 +193,6 @@ class BaseClient(ClientHook):
         )
 
 
-class ProgressBar:
-    """无额外依赖的服务端终端进度条。"""
-
-    def __init__(self, algorithm: str, total: int):
-        self.algorithm = algorithm.upper()
-        self.total = total
-        self.current = 0
-
-    def update(
-        self,
-        loss: float,
-        accuracy: float,
-        max_accuracy: float,
-        round_elapsed: float,
-        total_elapsed: float,
-        extra_fields: dict[str, str | int | float] | None = None,
-    ) -> None:
-        """刷新当前通信轮进度与基础指标。"""
-        self.current += 1
-        average_elapsed = total_elapsed / self.current
-        remaining = average_elapsed * (self.total - self.current)
-        extras = (
-            ""
-            if not extra_fields
-            else " "
-            + " ".join(f"{name}={value}" for name, value in extra_fields.items())
-        )
-        text = (
-            f"\r{self.algorithm} {self.current}/{self.total} "
-            f"loss={loss:.4f} acc={accuracy:.2f}% max_acc={max_accuracy:.2f}% "
-            f"elapsed={format_duration(total_elapsed)} eta={format_duration(remaining)} "
-            f"round_time={round_elapsed:.2f}s{extras}"
-        )
-        sys.stderr.write(text)
-        sys.stderr.flush()
-
-    def close(self) -> None:
-        """结束进度行。"""
-        if self.current:
-            sys.stderr.write("\n")
-            sys.stderr.flush()
-
-
 def format_duration(seconds: float) -> str:
     """将秒数格式化为适合终端展示的 HH:MM:SS。"""
     total_seconds = max(0, round(seconds))
@@ -219,6 +219,7 @@ class BaseServer(abc.ABC):
         self.check_round = args.check_round
         self.service_device = args.service_device
         self.device = torch.device(f"cuda:{self.service_device}")
+        startup_trace(args, "load_federated_data_begin")
         self.train_sets, self.test_sets, self.num_classes = load_federated_data(
             args.dataset,
             args.data_root,
@@ -229,6 +230,7 @@ class BaseServer(abc.ABC):
             args.classes_per_client,
             args.seed,
         )
+        startup_trace(args, "load_federated_data_done")
         self.test_set = ConcatDataset(list(self.test_sets.values()))
         self.model = build_model(
             args.model,
@@ -448,7 +450,7 @@ class BaseServer(abc.ABC):
             }
         }
 
-    def progress_fields(self) -> dict[str, str | int | float]:
+    def progress_fields(self) -> dict[str, Any]:
         """返回当前轮应附加到进度条的只读算法指标。"""
         if self.pfl:
             return {"micro_acc": f"{self.personalized_micro_accuracy:.2f}%"}
