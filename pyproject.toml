@@ -1,0 +1,42 @@
+[project]
+name = "fl-mp"
+version = "0.1.0"
+description = "基于 PyTorch 原生多进程的联邦学习框架"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.11.0",
+    "torchvision>=0.26.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "ruff>=0.15.0",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://mirrors.seu.edu.cn/pypi/index"
+default = true
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://mirrors.seu.edu.cn/pytorch/whl/cu132/simple"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu132", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu132", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchaudio = [
+  { index = "pytorch-cu132", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
