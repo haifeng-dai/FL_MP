@@ -3,8 +3,8 @@
 import torch
 from torch.utils.data import Subset
 
-from algo.core import BaseClient, BaseServer
-from runtime import adjacency, clone_state
+from .core import BaseClient, BaseServer, clone_state
+from .core.decentralized import adjacency
 
 
 def add_arguments(parser):

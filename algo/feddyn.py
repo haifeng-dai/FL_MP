@@ -1,11 +1,9 @@
 """FedDyn 算法实现。"""
 
-from __future__ import annotations
-
 import torch
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 
-from algo.core import BaseClient, BaseServer
+from .core import BaseClient, BaseServer
 
 
 def add_arguments(parser):

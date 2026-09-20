@@ -1,7 +1,7 @@
 """DFedAvgM 算法实现。"""
 
-from algo.core import BaseClient, BaseServer
-from runtime import adjacency, metropolis_hastings, mix_states
+from algo.core.base import BaseClient, BaseServer
+from algo.core.decentralized import adjacency, metropolis_hastings, mix_states
 
 
 class DFedAvgMClient(BaseClient):

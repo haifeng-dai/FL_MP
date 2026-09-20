@@ -1,15 +1,13 @@
 """DFedSET：事件触发的模型与类别原型去中心化一致性训练。"""
 
-import argparse
-
 import torch
 
-from algo.core import BaseClient, BaseServer
-from algo.fedproc import extract_prototypes
-from runtime import adjacency, metropolis_hastings
+from .core import BaseClient, BaseServer
+from .core.decentralized import adjacency, metropolis_hastings
+from .fedproc import extract_prototypes
 
 
-def add_arguments(parser: argparse.ArgumentParser) -> None:
+def add_arguments(parser):
     parser.add_argument("--lambda-sa", type=float, default=0.0)
     parser.add_argument("--lambda-so", type=float, default=0.0)
     parser.add_argument("--eta", type=float, default=0.1)

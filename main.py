@@ -1,7 +1,5 @@
 """FL_MP 统一命令入口和通用运行编排。"""
 
-from __future__ import annotations
-
 import argparse
 from datetime import UTC, datetime
 from types import ModuleType
@@ -9,7 +7,7 @@ from types import ModuleType
 import torch
 
 from algo import load_algorithm
-from algo.base import add_shared_arguments, set_seed, validate_arguments
+from algo.core.config import add_shared_arguments, set_seed, validate_arguments
 from result import configure_logging, create_run, record_summary
 
 

@@ -1,6 +1,6 @@
 """纯本地训练算法实现。"""
 
-from algo.core import BaseClient, BaseServer
+from .core import BaseClient, BaseServer
 
 
 class LocalClient(BaseClient):

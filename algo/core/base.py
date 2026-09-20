@@ -1,7 +1,5 @@
 """联邦算法共用的服务端与客户端基础类。"""
 
-from __future__ import annotations
-
 import abc
 import argparse
 import random
@@ -12,19 +10,20 @@ from typing import Any
 import torch
 from torch.utils.data import ConcatDataset, Subset
 
-from algo.base import parse_devices, set_seed
 from dataset import load_federated_data, make_loader
 from model import build_model
 from result import append_metrics
-from runtime import (
+
+from .config import parse_devices, set_seed
+from .process import PersistentClientPool
+from .protocol import (
     ClientHook,
     ClientResult,
     ClientTask,
     EvaluationResult,
     EvaluationTask,
-    PersistentClientPool,
-    clone_state,
 )
+from .state import clone_state
 
 
 class BaseClient(ClientHook):

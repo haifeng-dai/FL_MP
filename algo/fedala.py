@@ -3,8 +3,9 @@
 import torch
 from torch.utils.data import Subset
 
-from algo.core import BaseClient, BaseServer
 from dataset import make_loader
+
+from .core import BaseClient, BaseServer
 
 
 def add_arguments(parser):

@@ -1,15 +1,15 @@
 """DisPFL：带动态稀疏掩码的去中心化个性化联邦学习。"""
 
-import argparse
 import math
 
 import torch
 
-from algo.core import BaseClient, BaseServer
-from runtime import adjacency, clone_state
+from algo.core.decentralized import adjacency
+
+from .core import BaseClient, BaseServer, clone_state
 
 
-def add_arguments(parser: argparse.ArgumentParser) -> None:
+def add_arguments(parser):
     parser.add_argument("--dense-ratio", type=float, default=0.5)
     parser.add_argument("--anneal-factor", type=float, default=0.1)
     parser.add_argument("--erk-power-scale", type=float, default=1.0)

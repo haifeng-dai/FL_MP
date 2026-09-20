@@ -1,11 +1,8 @@
 """FedLSA 算法实现。"""
 
-from __future__ import annotations
-
 import torch
 
-from algo.core import BaseClient, BaseServer
-from runtime import clone_state
+from .core import BaseClient, BaseServer, clone_state
 
 
 def add_arguments(parser):

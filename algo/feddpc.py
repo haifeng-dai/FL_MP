@@ -3,10 +3,9 @@
 import torch
 from torch.utils.data import DataLoader
 
-from algo.core import BaseClient, BaseServer
-from algo.fedpln import PLN
-from algo.fedproc import extract_prototypes
-from runtime import clone_state
+from .core import BaseClient, BaseServer, clone_state
+from .fedpln import PLN
+from .fedproc import extract_prototypes
 
 
 def add_arguments(parser):

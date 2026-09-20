@@ -2,7 +2,7 @@
 
 import torch
 
-from .protocol import clone_state
+from .state import clone_state
 
 
 def adjacency(args) -> torch.Tensor:

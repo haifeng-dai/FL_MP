@@ -1,7 +1,7 @@
 """FedRep 算法实现。"""
 
-from algo.core import BaseClient, BaseServer
-from algo.fedper import aggregate_states
+from .core import BaseClient, BaseServer
+from .fedper import aggregate_states
 
 
 def add_arguments(parser):

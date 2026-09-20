@@ -1,11 +1,8 @@
 """SCAFFOLD 算法实现。"""
 
-from __future__ import annotations
-
 import torch
 
-from algo.core import BaseClient, BaseServer
-from runtime import clone_state
+from .core import BaseClient, BaseServer, clone_state
 
 
 def add_arguments(parser):
@@ -72,7 +69,7 @@ class Server(BaseServer):
 
     def __init__(self, args):
         super().__init__(args)
-        self.global_lr = args.global_lr
+        self.global_lr: float = args.global_lr
         self.global_control = {
             name: torch.zeros_like(parameter, device="cpu")
             for name, parameter in self.model.named_parameters()

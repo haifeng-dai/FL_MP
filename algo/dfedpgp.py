@@ -2,8 +2,8 @@
 
 import torch
 
-from algo.core import BaseClient, BaseServer
-from runtime import adjacency, clone_state, mix_states
+from .core import BaseClient, BaseServer, clone_state
+from .core.decentralized import adjacency, mix_states
 
 
 def add_arguments(parser):

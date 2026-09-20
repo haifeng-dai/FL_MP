@@ -1,10 +1,8 @@
 """FedProc 算法实现。"""
 
-from __future__ import annotations
-
 import torch
 
-from algo.core import BaseClient, BaseServer
+from .core import BaseClient, BaseServer
 
 
 def prototype_loss(

@@ -1,8 +1,6 @@
 """FedAvg 算法实现。"""
 
-from __future__ import annotations
-
-from algo.core import BaseClient, BaseServer
+from .core import BaseClient, BaseServer
 
 
 class FedAvgClient(BaseClient):

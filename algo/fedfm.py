@@ -1,11 +1,9 @@
 """FedFM 算法实现。"""
 
-from __future__ import annotations
-
 import torch
 
-from algo.core import BaseClient, BaseServer
-from algo.fedproc import (
+from .core import BaseClient, BaseServer
+from .fedproc import (
     aggregate_prototypes,
     extract_prototypes,
     prototype_loss,

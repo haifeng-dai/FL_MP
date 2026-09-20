@@ -2,9 +2,9 @@
 
 import torch
 
-from algo.core import BaseClient, BaseServer
-from algo.fedproc import extract_prototypes
-from runtime import adjacency, mix_states, sinkhorn
+from .core import BaseClient, BaseServer
+from .core.decentralized import adjacency, mix_states, sinkhorn
+from .fedproc import extract_prototypes
 
 
 def add_arguments(parser):

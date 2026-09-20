@@ -1,7 +1,5 @@
 """客户端任务、结果和训练钩子的公共协议。"""
 
-from __future__ import annotations
-
 import abc
 import argparse
 from dataclasses import dataclass
@@ -75,8 +73,3 @@ class ClientHook(abc.ABC):
     def evaluate(self, task: EvaluationTask) -> EvaluationResult:
         """执行一项客户端私有测试集评估任务。"""
         raise NotImplementedError
-
-
-def clone_state(state: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
-    """创建不关联计算图、可跨进程传输的 CPU 模型状态。"""
-    return {name: value.detach().cpu().clone() for name, value in state.items()}

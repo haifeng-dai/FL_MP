@@ -1,7 +1,5 @@
 """算法无关的持久原生多进程客户端池。"""
 
-from __future__ import annotations
-
 import argparse
 import traceback
 from collections.abc import Mapping

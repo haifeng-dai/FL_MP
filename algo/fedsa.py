@@ -2,9 +2,9 @@
 
 import torch
 
-from algo.core import BaseClient, BaseServer
-from algo.fedpln import dist_contrastive_loss
-from algo.fedproc import aggregate_prototypes, extract_prototypes
+from .core import BaseClient, BaseServer
+from .fedpln import dist_contrastive_loss
+from .fedproc import aggregate_prototypes, extract_prototypes
 
 
 def add_arguments(parser):

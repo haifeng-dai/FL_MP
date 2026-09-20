@@ -1,17 +1,13 @@
 """FedPLN 算法实现。"""
 
-from __future__ import annotations
-
-import argparse
-
 import torch
 
-from algo.core import BaseClient, BaseServer
 from dataset import make_loader
-from runtime import clone_state
+
+from .core import BaseClient, BaseServer, clone_state
 
 
-def add_arguments(parser: argparse.ArgumentParser):
+def add_arguments(parser):
     """注册 FedPLN 私有超参数。"""
     parser.add_argument("--lambda", dest="lambda_", type=float, default=10.0)
     parser.add_argument("--epoch-pln", type=int, default=10)
