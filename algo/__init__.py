@@ -4,7 +4,7 @@ import argparse
 import importlib
 from pathlib import Path
 
-_ALGORITHM_DIRS = ("gfl", "pfl", "dfl")
+_ALGORITHM_DIRS = ("gfl", "pfl", "dfl", "cfl")
 
 
 def load_algorithm():

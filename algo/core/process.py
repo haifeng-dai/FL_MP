@@ -150,6 +150,17 @@ class PersistentClientPool:
         """调度任务；任一 Worker 错误都会使本轮立即失败。"""
         return cast(dict[int, ClientResult], self._run(tasks, "训练"))
 
+    def run_affined(self, tasks: list[ClientTask]) -> dict[int, ClientResult]:
+        """按客户端编号固定 Worker 调度，供持有客户端跨轮状态的算法使用。"""
+        if len({task.client_id for task in tasks}) != len(tasks):
+            raise ValueError("固定调度不允许同一客户端在一轮中出现多次")
+        queues: list[list[ClientTask]] = [[] for _ in self.inboxes]
+        for task in tasks:
+            queues[task.client_id % len(self.inboxes)].append(task)
+        return cast(
+            dict[int, ClientResult], self._run_worker_queues(queues, "固定调度训练")
+        )
+
     def evaluate(self, tasks: list[EvaluationTask]) -> dict[int, EvaluationResult]:
         """复用同一批 Worker 并发执行客户端私有测试集评估。"""
         return cast(dict[int, EvaluationResult], self._run(tasks, "评估"))
@@ -172,6 +183,28 @@ class PersistentClientPool:
             if next_task < len(tasks):
                 self.inboxes[worker_id].put(tasks[next_task])
                 next_task += 1
+                active += 1
+        return results
+
+    def _run_worker_queues(self, queues, action: str):
+        """让每个 Worker 串行消费自己的任务队列。"""
+        results: dict[int, Any] = {}
+        positions = [0] * len(queues)
+        active = 0
+        for worker_id, tasks in enumerate(queues):
+            if tasks:
+                self.inboxes[worker_id].put(tasks[0])
+                positions[worker_id] = 1
+                active += 1
+        while active:
+            worker_id, client_id, result, error = self.outbox.get()
+            active -= 1
+            if error is not None:
+                raise RuntimeError(f"worker {worker_id} {action}失败：\n{error}")
+            results[client_id] = result
+            if positions[worker_id] < len(queues[worker_id]):
+                self.inboxes[worker_id].put(queues[worker_id][positions[worker_id]])
+                positions[worker_id] += 1
                 active += 1
         return results
 
